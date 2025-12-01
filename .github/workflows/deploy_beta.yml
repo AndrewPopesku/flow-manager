@@ -5,8 +5,13 @@ on:
     branches:
       - main
 
+env:
+  AWS_REGION: eu-north-1
+  IMAGE_NAME: flow-manager
+
 jobs:
-  deploy:
+  test:
+    name: Test & Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -29,70 +34,70 @@ jobs:
       - name: Run tests
         run: ~/.local/bin/uv run pytest
 
-      - name: Deploy to AWS
+  build:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
         run: |
-          # Configure AWS credentials
-          aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-          aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-          aws configure set region $AWS_REGION
-          
-          # Login to Amazon ECR
-          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com
-          
-          # Set up Docker Buildx for multi-platform builds
-          docker buildx create --use --name multiplatform-builder || docker buildx use multiplatform-builder
-          
-          # Build Docker image for ARM64 and AMD64
-          docker buildx build --platform linux/arm64,linux/amd64 \
-            -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/flow-manager:latest \
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set region ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
+            docker login --username AWS --password-stdin \
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+
+      - name: Set up Docker Buildx
+        run: |
+          docker buildx create --use --name multiplatform-builder || \
+            docker buildx use multiplatform-builder
+
+      - name: Build and push Docker image
+        run: |
+          docker buildx build \
+            --platform linux/arm64,linux/amd64 \
+            -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.IMAGE_NAME }}:latest \
             --push \
             .
-          
-          # Deploy to EC2 instance
+
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup SSH key
+        run: |
           echo "${{ secrets.EC2_SSH_KEY }}" > ec2_key.pem
           chmod 600 ec2_key.pem
-          
-          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ec2-user@${{ secrets.EC2_HOST }} << 'EOF'
-            # Install Docker if not already installed
-            if ! command -v docker &> /dev/null; then
-              echo "Installing Docker..."
-              sudo yum update -y
-              sudo yum install -y docker
-              sudo systemctl start docker
-              sudo systemctl enable docker
-              sudo usermod -aG docker ec2-user
-            fi
-            
-            # Install AWS CLI if not already installed
-            if ! command -v aws &> /dev/null; then
-              echo "Installing AWS CLI..."
-              curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-              unzip -q awscliv2.zip
-              sudo ./aws/install
-              rm -rf aws awscliv2.zip
-            fi
+
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem ec2-user@${{ secrets.EC2_HOST }} << 'ENDSSH'
+            # Setup EC2 environment
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/.github/scripts/setup-ec2.sh | bash
             
             # Configure AWS credentials
             export AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
             export AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            export AWS_DEFAULT_REGION=eu-north-1
+            export AWS_REGION=${{ env.AWS_REGION }}
+            export AWS_ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }}
+            export IMAGE_NAME=${{ env.IMAGE_NAME }}
+            export CONTAINER_PORT=8000
             
-            # Login to ECR on EC2
-            aws ecr get-login-password --region eu-north-1 | sudo docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-north-1.amazonaws.com
-            
-            # Pull latest image
-            sudo docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-north-1.amazonaws.com/flow-manager:latest
-            
-            # Stop and remove old container if exists
-            sudo docker stop flow-manager || true
-            sudo docker rm flow-manager || true
-            
-            # Run new container
-            sudo docker run -d --name flow-manager -p 8000:8000 --restart unless-stopped ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-north-1.amazonaws.com/flow-manager:latest
-          EOF
-          
-          rm -f ec2_key.pem
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: "eu-north-1"
+            # Deploy container
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/.github/scripts/deploy-container.sh | bash
+          ENDSSH
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ec2_key.pem

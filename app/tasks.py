@@ -24,7 +24,7 @@ def task1_fetch_data() -> TaskResult:
     """
     logger.info("Executing task1: Fetching data...")
     time.sleep(0.5)
-    return TaskResult(status="success", data={"raw_data": [1, 2, 3]})
+    return TaskResult(status="success", data={"raw_data": "data"})
 
 
 @register_task("task2")
@@ -34,7 +34,7 @@ def task2_process_data() -> TaskResult:
     """
     logger.info("Executing task2: Processing data...")
     time.sleep(0.5)
-    return TaskResult(status="success", data={"processed_data": [2, 4, 6]})
+    return TaskResult(status="success", data={"processed_data": "data"})
 
 
 @register_task("task3")

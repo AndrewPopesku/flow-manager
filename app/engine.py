@@ -34,7 +34,6 @@ class FlowEngine:
                 )
             except Exception as e:
                 logger.error(f"Error executing task '{current_task_name}': {e}")
-                # Treat exception as failure or handle gracefully
                 result = TaskResult(status="failure", data={"error": str(e)})
                 self.execution_history[current_task_name] = result
 
