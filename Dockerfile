@@ -9,6 +9,7 @@ COPY pyproject.toml ./
 RUN uv sync
 
 COPY app/ ./app/
+COPY tests/ ./tests/
 
 EXPOSE 8000
 

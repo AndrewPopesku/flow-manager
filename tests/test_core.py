@@ -18,7 +18,7 @@ def mock_failure():
 class TestFlowEngine(unittest.TestCase):
     def setUp(self):
         self.flow_data = {
-            "id": "test_flow",
+            "id": "123e4567-e89b-12d3-a456-426614174000",
             "name": "Test Flow",
             "start_task": "mock_success",
             "tasks": [

@@ -1,22 +1,23 @@
 from fastapi import APIRouter, HTTPException
-from app.schemas import Flow
+from app.schemas import Flow, FlowCreate
 from app.engine import FlowEngine
+import uuid
 
 router = APIRouter()
 
 
 @router.post("/flow/execute")
-async def execute_flow(flow: Flow):
+async def execute_flow(flow_in: FlowCreate):
     """
     Executes a flow defined in the request body.
     """
     try:
+        flow = Flow(id=uuid.uuid4(), **flow_in.model_dump())
         engine = FlowEngine(flow)
-        # In a real async app, we might want to run this in a background task
-        # or make the engine async. For now, we run synchronously.
         engine.run()
         return {
             "message": f"Flow '{flow.name}' executed successfully.",
+            "flow_id": flow.id,
             "history": [r.model_dump() for r in engine.execution_history.values()],
         }
     except Exception as e:
@@ -29,7 +30,7 @@ async def run_sample_flow():
     Runs a hardcoded sample flow for demonstration purposes.
     """
     sample_flow_data = {
-        "id": "flow123",
+        "id": uuid.uuid4(),
         "name": "Data processing flow",
         "start_task": "task1",
         "tasks": [

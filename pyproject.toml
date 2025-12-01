@@ -28,6 +28,7 @@ packages = ["app"]
 dev = [
     "pytest>=9.0.1",
     "ruff",
+    "pytest-cov",
 ]
 
 [tool.pytest.ini_options]
