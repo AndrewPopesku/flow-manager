@@ -1,7 +1,7 @@
 import unittest
-from app.schemas import Flow, Task, Condition, TaskResult
+from app.schemas import Flow, TaskResult
 from app.engine import FlowEngine
-from app.tasks import register_task, TASK_REGISTRY
+from app.tasks import register_task
 
 
 # Mock tasks for testing
