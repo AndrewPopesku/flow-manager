@@ -2,7 +2,6 @@
 name = "flow-manager"
 version = "0.1.0"
 description = "A flow manager system for executing tasks sequentially with conditions"
-readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "fastapi==0.123.0",
