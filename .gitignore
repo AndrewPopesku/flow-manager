@@ -1,0 +1,32 @@
+# .venv directory (created by uv)
+.venv/
+
+# Old venv directory
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Test cache
+.pytest_cache/
+
+# Environment files
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Lock files
+requirements.lock
+uv.lock
