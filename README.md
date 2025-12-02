@@ -1,62 +1,123 @@
-# Flow Manager
+# 🚀 Flow Manager Microservice
 
-A flow manager system for executing tasks sequentially with conditions to evaluate task success or failure and determine the flow's progression.
+This repository contains the design and implementation of a generic **Flow Manager** system, developed as a Python microservice using **FastAPI**.
 
-## Features
+The Flow Manager executes a sequence of tasks defined in a JSON configuration, using **conditions** to determine the next step based on the outcome (success or failure) of the preceding task. This architecture is ideal for managing critical, multi-step workflows like client onboarding or data processing.
 
-- Execute tasks sequentially based on defined flows
-- Conditional task execution based on success/failure
-- RESTful API for flow management
-- Generic support for any number of tasks and conditions
+---
 
-## Installation
+## 💻 Technical Stack
 
-### Using uv (Recommended)
+- **Framework:** FastAPI (Python 3.14)
+- **Dependencies:** `uvicorn`, `pydantic`, `httpx`
+- **Design Pattern:** Registry pattern for Task management
+- **Testing:** pytest with httpx for async endpoint testing
+- **Deployment:** Docker & Docker Compose, AWS EC2 with GitHub Actions CI/CD
+
+---
+
+## 💡 Design Explanation
+
+The system is designed to be **generic** and decoupled, separating the task logic from the routing logic.
+
+### Task Dependencies and Execution Flow
+
+The flow does not have hardcoded dependencies. Dependencies are defined **dynamically** within the `conditions` section of the input JSON.
+
+1. The `FlowEngine` reads the `start_task` from the flow configuration.
+2. It executes the task using a lookup against the `TASK_REGISTRY` in [tasks.py](file:///Users/andriipopesku/projects/coding-tasks/flow-manager/app/tasks.py).
+3. The task execution returns a `TaskResult` object with a `status` field (`"success"` or `"failure"`) and optional `data`.
+4. The Engine then searches the `conditions` list for a rule where the `source_task` matches the task just completed.
+5. Based on the result status, the Engine selects the next step by choosing either the `target_task_success` or `target_task_failure`.
+
+### Success/Failure Evaluation
+
+A task's success or failure is determined by the `status` field in the `TaskResult` object returned by its corresponding Python function in [tasks.py](file:///Users/andriipopesku/projects/coding-tasks/flow-manager/app/tasks.py). In a real-world scenario, this return value would likely be based on:
+
+- Checking the HTTP status code of an external API call (e.g., `200` for success).
+- A database transaction status.
+- The absence of exceptions during execution.
+
+### Handling Task Outcomes
+
+The flow is designed for **sequential execution with immediate termination on failure**.
+
+- **On Success:** The flow proceeds to the task specified by `target_task_success` (e.g., `task2` after `task1` succeeds).
+- **On Failure:** The flow immediately terminates by setting the next target to `"end"`.
+
+### Architecture Components
+
+```
+flow-manager/
+├── app/
+│   ├── engine.py          # FlowEngine - Core execution logic
+│   ├── main.py            # FastAPI application entry point
+│   ├── routes.py          # API route definitions
+│   ├── schemas.py         # Pydantic models for validation
+│   ├── tasks.py           # Task registry and implementations
+│   ├── logging_config.py  # Logging configuration
+│   └── sample_flow.json   # Example flow configuration
+├── tests/
+│   ├── test_api.py        # API endpoint tests
+│   └── test_core.py       # Core engine tests
+├── .github/
+│   └── workflows/
+│       └── deploy_beta.yml # CI/CD pipeline for AWS EC2
+├── Dockerfile             # Container image definition
+├── docker-compose.yml     # Local development setup
+└── pyproject.toml         # Project metadata and dependencies
+```
+
+---
+
+## 🛠️ Setup and Execution
+
+### Prerequisites
+
+You need **Python 3.10+** installed.
+
+### Installation
+
+#### Using uv (Recommended)
 
 [uv](https://github.com/astral-sh/uv) is a fast Python package installer and virtual environment manager.
 
-#### Install uv
-
 ```bash
-# macOS/Linux
+# Install uv (macOS/Linux)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Or with Homebrew
 brew install uv
-```
 
-#### Set up the project
+# Clone the repository
+git clone https://github.com/AndrewPopesku/flow-manager.git
+cd flow-manager
 
-```bash
+# Set up the project (creates venv and installs dependencies)
 uv sync
 ```
 
-#### Run commands with uv
+#### Using traditional pip
 
 ```bash
-# Run the development server
-uv run uvicorn app.main:app --reload
+# Clone the repository
+git clone https://github.com/AndrewPopesku/flow-manager.git
+cd flow-manager
 
-# Run tests
-uv run pytest
-```
-
-### Using traditional pip
-
-```bash
 # Create a virtual environment
 python -m venv .venv
 
 # Activate the virtual environment
 source .venv/bin/activate  # On macOS/Linux
+# .venv\Scripts\activate   # On Windows
 
 # Install dependencies
 pip install .
 ```
 
-## Running the Application
+### Running the Microservice
 
-### Development Server
+#### Development Server
 
 ```bash
 # With uv
@@ -66,21 +127,9 @@ uv run uvicorn app.main:app --reload
 uvicorn app.main:app --reload
 ```
 
-The API will be available at `http://localhost:8000`
+The microservice will be available at `http://127.0.0.1:8000`.
 
-### Docker
-
-The easiest way to run the application is using Docker:
-
-```bash
-# Build and run with docker-compose
-docker-compose up
-
-# Stop the application
-docker-compose down
-```
-
-Or using Docker directly:
+#### Using Docker
 
 ```bash
 # Build the image
@@ -90,15 +139,98 @@ docker build -t flow-manager .
 docker run -p 8000:8000 flow-manager
 ```
 
-The API will be available at `http://localhost:8000`
-
 ### API Documentation
 
-Once the server is running, visit:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+The clear API requirement is met via **Swagger UI** (OpenAPI documentation), automatically generated by FastAPI:
 
-## Running Tests
+- **Swagger UI:** `http://127.0.0.1:8000/docs`
+- **ReDoc:** `http://127.0.0.1:8000/redoc`
+
+---
+
+## 🔌 API Usage
+
+### Execute Flow Endpoint
+
+**Endpoint:** `POST /flow/execute`
+
+**Request Body:**
+
+```json
+{
+  "flow": {
+    "name": "Data processing flow",
+    "start_task": "task1",
+    "tasks": [
+      { "name": "task1", "description": "Fetch data" },
+      { "name": "task2", "description": "Process data" },
+      { "name": "task3", "description": "Store data" }
+    ],
+    "conditions": [
+      {
+        "name": "condition_task1_result",
+        "description": "Evaluate task1. If success -> task2, else -> end",
+        "source_task": "task1",
+        "outcome": "success",
+        "target_task_success": "task2",
+        "target_task_failure": "end"
+      },
+      {
+        "name": "condition_task2_result",
+        "description": "Evaluate task2. If success -> task3, else -> end",
+        "source_task": "task2",
+        "outcome": "success",
+        "target_task_success": "task3",
+        "target_task_failure": "end"
+      }
+    ]
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "Flow executed successfully",
+  "flow_id": "550e8400-e29b-41d4-a716-446655440000",
+  "execution_history": {
+    "task1": {
+      "status": "success",
+      "data": { "raw_data": "data" }
+    },
+    "task2": {
+      "status": "success",
+      "data": { "processed_data": "data" }
+    },
+    "task3": {
+      "status": "success",
+      "data": { "storage_id": "12345" }
+    }
+  }
+}
+```
+
+### Example API Call
+
+Using `curl`:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/flow/execute" \
+  -H "Content-Type: application/json" \
+  -d @app/sample_flow.json
+```
+
+Using the Swagger UI:
+1. Navigate to `http://127.0.0.1:8000/docs`
+2. Click on the `POST /flow/execute` endpoint
+3. Click "Try it out"
+4. Use the sample payload or modify as needed
+5. Click "Execute"
+
+---
+
+## 🧪 Running Tests
 
 ```bash
 # With uv
@@ -106,26 +238,96 @@ uv run pytest
 
 # Or traditional approach
 pytest
+
+# With coverage
+uv run pytest --cov=app --cov-report=html
 ```
 
-## Project Structure
+---
 
+## 🚢 Deployment
+
+### AWS EC2 Deployment
+
+The project includes a GitHub Actions CI/CD pipeline that automatically deploys to AWS EC2 on push to the `main` branch.
+
+**Workflow:** [.github/workflows/deploy_beta.yml](file:///Users/andriipopesku/projects/coding-tasks/flow-manager/.github/workflows/deploy_beta.yml)
+
+**Required GitHub Secrets:**
+- `EC2_HOST` - EC2 instance public IP or hostname
+- `EC2_USER` - SSH username (e.g., `ubuntu`)
+- `EC2_SSH_KEY` - Private SSH key for EC2 access
+
+The deployment process:
+1. Runs tests to ensure code quality
+2. Connects to EC2 via SSH
+3. Pulls latest code from GitHub
+4. Builds and deploys using Docker Compose
+
+---
+
+## 📝 Adding New Tasks
+
+To add a new task to the system:
+
+1. Open [app/tasks.py](file:///Users/andriipopesku/projects/coding-tasks/flow-manager/app/tasks.py)
+2. Define your task function using the `@register_task` decorator:
+
+```python
+@register_task("my_new_task")
+def my_new_task() -> TaskResult:
+    """
+    Description of what this task does.
+    """
+    logger.info("Executing my_new_task...")
+    # Your task logic here
+    return TaskResult(status="success", data={"result": "value"})
 ```
-flow-manager/
-├── app/
-│   ├── engine.py       # Flow execution engine
-│   ├── main.py         # FastAPI application entry point
-│   ├── routes.py       # API route definitions
-│   ├── schemas.py      # Pydantic models
-│   └── tasks.py        # Task implementations
-├── tests/
-│   ├── test_api.py     # API tests
-│   └── test_core.py    # Core engine tests
-├── .dockerignore       # Docker build exclusions
-├── .gitignore          # Git exclusions
-├── .python-version     # Python version for uv
-├── docker-compose.yml  # Docker Compose configuration
-├── Dockerfile          # Docker image definition
-├── pyproject.toml      # Project metadata and dependencies
-└── README.md
-```
+
+3. Update your flow JSON to include the new task in the `tasks` array and add appropriate conditions.
+
+---
+
+## 🏗️ Design Patterns
+
+### Registry Pattern
+
+The system uses the **Registry Pattern** for task management:
+
+- Tasks are registered using the `@register_task` decorator
+- The `TASK_REGISTRY` dictionary maps task names to their implementations
+- This allows for dynamic task lookup and execution without hardcoded dependencies
+
+### Separation of Concerns
+
+- **Schemas** ([schemas.py](file:///Users/andriipopesku/projects/coding-tasks/flow-manager/app/schemas.py)): Data validation and models
+- **Tasks** ([tasks.py](file:///Users/andriipopesku/projects/coding-tasks/flow-manager/app/tasks.py)): Business logic implementations
+- **Engine** ([engine.py](file:///Users/andriipopesku/projects/coding-tasks/flow-manager/app/engine.py)): Flow execution and control logic
+- **Routes** ([routes.py](file:///Users/andriipopesku/projects/coding-tasks/flow-manager/app/routes.py)): API endpoint definitions
+
+---
+
+## 🔍 Key Features
+
+- ✅ **Generic Flow Definition**: Define any number of tasks and conditions via JSON
+- ✅ **Dynamic Execution**: Tasks are executed based on runtime conditions
+- ✅ **Error Handling**: Graceful failure handling with detailed execution history
+- ✅ **Type Safety**: Full Pydantic validation for all inputs and outputs
+- ✅ **Auto-generated Documentation**: OpenAPI/Swagger UI for easy API exploration
+- ✅ **Containerized**: Docker support for consistent deployment
+- ✅ **CI/CD Ready**: GitHub Actions workflow for automated testing and deployment
+- ✅ **Extensible**: Easy to add new tasks via the registry pattern
+
+---
+
+## 📄 License
+
+This project is developed as a technical assignment demonstrating microservice architecture and workflow management capabilities.
+
+---
+
+## 👨‍💻 Author
+
+**Andrii Popesku**
+
+GitHub: [@AndrewPopesku](https://github.com/AndrewPopesku)
