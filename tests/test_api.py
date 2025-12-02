@@ -35,8 +35,5 @@ def test_execute_custom_flow():
     response = client.post("/flow/execute", json=flow_payload)
     assert response.status_code == 200
     data = response.json()
-    assert "success" in [
-        h["status"] for h in data["history"]
-    ]  # Check if status is present, history is list of dicts
-    # Actually history is list of TaskResult dicts: [{'status': 'success', 'data': ...}]
+    assert "success" in [h["status"] for h in data["history"]]
     assert data["history"][0]["status"] == "success"

@@ -1,14 +1,8 @@
 #!/bin/bash
 set -e
 
-# Required environment variables:
-# - AWS_ACCOUNT_ID
-# - AWS_REGION
-# - IMAGE_NAME (default: flow-manager)
-# - CONTAINER_PORT (default: 8000)
-
 IMAGE_NAME=${IMAGE_NAME:-flow-manager}
-CONTAINER_PORT=${CONTAINER_PORT:-8000}
+CONTAINER_PORT=8000:-8000
 ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 FULL_IMAGE="${ECR_REGISTRY}/${IMAGE_NAME}:latest"
 

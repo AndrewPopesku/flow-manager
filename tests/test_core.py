@@ -4,7 +4,6 @@ from app.engine import FlowEngine
 from app.tasks import register_task
 
 
-# Mock tasks for testing
 @register_task("mock_success")
 def mock_success():
     return TaskResult(status="success", data="ok")
@@ -39,13 +38,13 @@ class TestFlowEngine(unittest.TestCase):
 
     def test_flow_execution_success(self):
         flow = Flow(**self.flow_data)
-        engine = FlowEngine(flow)
-        engine.run()
+        engine = FlowEngine()
+        history = engine.run(flow)
 
-        self.assertIn("mock_success", engine.execution_history)
-        self.assertEqual(engine.execution_history["mock_success"].status, "success")
+        self.assertIn("mock_success", history)
+        self.assertEqual(history["mock_success"].status, "success")
         # Should end after mock_success because target_task_success is "end"
-        self.assertNotIn("mock_failure", engine.execution_history)
+        self.assertNotIn("mock_failure", history)
 
     def test_flow_execution_failure_path(self):
         # Modify condition to go to mock_failure on success (just to test path)
@@ -63,12 +62,12 @@ class TestFlowEngine(unittest.TestCase):
         )
 
         flow = Flow(**self.flow_data)
-        engine = FlowEngine(flow)
-        engine.run()
+        engine = FlowEngine()
+        history = engine.run(flow)
 
-        self.assertIn("mock_success", engine.execution_history)
-        self.assertIn("mock_failure", engine.execution_history)
-        self.assertEqual(engine.execution_history["mock_failure"].status, "failure")
+        self.assertIn("mock_success", history)
+        self.assertIn("mock_failure", history)
+        self.assertEqual(history["mock_failure"].status, "failure")
 
 
 if __name__ == "__main__":

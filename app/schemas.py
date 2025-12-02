@@ -49,3 +49,9 @@ class TaskResult(BaseModel):
         ..., description="Status of the task execution (e.g., 'success', 'failure')"
     )
     data: Optional[Any] = Field(None, description="Output data from the task")
+
+
+class FlowExecutionResponse(BaseModel):
+    message: str
+    flow_id: UUID
+    execution_history: dict[str, TaskResult]
