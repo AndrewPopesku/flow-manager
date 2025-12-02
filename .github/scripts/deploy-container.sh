@@ -3,13 +3,14 @@ set -e
 
 IMAGE_NAME=${IMAGE_NAME:-flow-manager}
 CONTAINER_PORT=${CONTAINER_PORT:-8000}
+HOST_PORT=${HOST_PORT:-8000}
 ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 FULL_IMAGE="${ECR_REGISTRY}/${IMAGE_NAME}:latest"
 
 echo "=== Container Deployment Script ==="
 echo "Image: ${FULL_IMAGE}"
 echo "Container: ${IMAGE_NAME}"
-echo "Port: ${CONTAINER_PORT}"
+echo "Port Mapping: ${HOST_PORT}:${CONTAINER_PORT}"
 
 # Login to ECR
 echo "Logging in to Amazon ECR..."
@@ -29,9 +30,9 @@ sudo docker rm "${IMAGE_NAME}" 2>/dev/null || true
 echo "Starting new container..."
 sudo docker run -d \
   --name "${IMAGE_NAME}" \
-  -p "${CONTAINER_PORT}:${CONTAINER_PORT}" \
+  -p "${HOST_PORT}:${CONTAINER_PORT}" \
   --restart unless-stopped \
   "${FULL_IMAGE}"
 
 echo "=== Deployment Complete ==="
-echo "Container ${IMAGE_NAME} is running on port ${CONTAINER_PORT}"
+echo "Container ${IMAGE_NAME} is running on port ${HOST_PORT}"
