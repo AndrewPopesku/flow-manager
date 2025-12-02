@@ -1,4 +1,4 @@
-# 🚀 Flow Manager Microservice
+# Flow Manager Microservice
 
 This repository contains the design and implementation of a generic **Flow Manager** system, developed as a Python microservice using **FastAPI**.
 
@@ -6,7 +6,7 @@ The Flow Manager executes a sequence of tasks defined in a JSON configuration, u
 
 ---
 
-## 💻 Technical Stack
+## Technical Stack
 
 - **Framework:** FastAPI (Python 3.14)
 - **Dependencies:** `uvicorn`, `pydantic`, `httpx`
@@ -16,7 +16,7 @@ The Flow Manager executes a sequence of tasks defined in a JSON configuration, u
 
 ---
 
-## 💡 Design Explanation
+## Design Explanation
 
 The system is designed to be **generic** and decoupled, separating the task logic from the routing logic.
 
@@ -70,7 +70,7 @@ flow-manager/
 
 ---
 
-## 🛠️ Setup and Execution
+## Setup and Execution
 
 ### Prerequisites
 
@@ -148,7 +148,7 @@ The clear API requirement is met via **Swagger UI** (OpenAPI documentation), aut
 
 ---
 
-## 🔌 API Usage
+## API Usage
 
 ### Execute Flow Endpoint
 
@@ -230,7 +230,7 @@ Using the Swagger UI:
 
 ---
 
-## 🧪 Running Tests
+## Running Tests
 
 ```bash
 # With uv
@@ -245,7 +245,7 @@ uv run pytest --cov=app --cov-report=html
 
 ---
 
-## 🚢 Deployment
+## Deployment
 
 ### AWS EC2 Deployment
 
@@ -266,7 +266,7 @@ The deployment process:
 
 ---
 
-## 📝 Adding New Tasks
+## Adding New Tasks
 
 To add a new task to the system:
 
@@ -288,7 +288,7 @@ def my_new_task() -> TaskResult:
 
 ---
 
-## 🏗️ Design Patterns
+## Design Patterns
 
 ### Registry Pattern
 
@@ -307,7 +307,7 @@ The system uses the **Registry Pattern** for task management:
 
 ---
 
-## 🔍 Key Features
+## Key Features
 
 - ✅ **Generic Flow Definition**: Define any number of tasks and conditions via JSON
 - ✅ **Dynamic Execution**: Tasks are executed based on runtime conditions
@@ -320,7 +320,7 @@ The system uses the **Registry Pattern** for task management:
 
 ---
 
-## 📄 License
+## License
 
 This project is developed as a technical assignment demonstrating microservice architecture and workflow management capabilities.
 
